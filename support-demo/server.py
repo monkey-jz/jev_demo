@@ -14,8 +14,10 @@ Then open http://127.0.0.1:8787
 
 from __future__ import annotations
 
+import errno
 import json
 import os
+import socket
 import sys
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -23,22 +25,75 @@ from pathlib import Path
 from urllib import error, request
 
 BASE_DIR = Path(__file__).resolve().parent
+ENV_FILE = BASE_DIR / ".env"
+
+
+def load_env_file(path: Path) -> bool:
+    """Load KEY=VALUE pairs from a local .env without overriding the shell."""
+    if not path.is_file():
+        return False
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError as exc:
+        print(f"Warning: could not read {path}: {exc}", file=sys.stderr)
+        return False
+
+    for raw in lines:
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("export "):
+            line = line[7:].strip()
+        if "=" not in line:
+            continue
+        name, value = line.split("=", 1)
+        name = name.strip()
+        value = value.strip()
+        if not name or not name.replace("_", "").isalnum():
+            continue
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in ("'", '"'):
+            value = value[1:-1]
+        os.environ.setdefault(name, value)
+    return True
+
+
+ENV_FILE_LOADED = load_env_file(ENV_FILE)
+
 API_URL = "https://api.typesafe.ai/v1/systemone"
 MODEL = "jev-latest"
-HOST = os.environ.get("HOST", "127.0.0.1")
-PORT = int(os.environ.get("PORT", "8787"))
+HOST = (os.environ.get("HOST") or "127.0.0.1").strip()
+try:
+    PORT = int(os.environ.get("PORT", "8787"))
+except ValueError:
+    print("PORT 必须是整数，例如 PORT=9000。", file=sys.stderr)
+    raise SystemExit(1)
 
 API_KEY = os.environ.get("TYPESAFE_API_KEY", "").strip()
 
-# Local demo default: ClashX. Set TYPESAFE_PROXY="" to connect directly.
-if "TYPESAFE_PROXY" in os.environ:
-    PROXY = os.environ["TYPESAFE_PROXY"].strip()
-else:
-    PROXY = (
-        os.environ.get("HTTPS_PROXY")
-        or os.environ.get("https_proxy")
-        or "http://127.0.0.1:7890"
-    ).strip()
+
+def normalize_proxy(value: str) -> str:
+    value = (value or "").strip()
+    if not value:
+        return ""
+    return value if "://" in value else f"http://{value}"
+
+
+def detect_proxy() -> str:
+    """Prefer explicit config, then standard proxy envs, then local ClashX."""
+    if "TYPESAFE_PROXY" in os.environ:
+        return normalize_proxy(os.environ["TYPESAFE_PROXY"])
+    for name in ("HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy"):
+        value = os.environ.get(name, "")
+        if value.strip():
+            return normalize_proxy(value)
+    try:
+        with socket.create_connection(("127.0.0.1", 7890), timeout=0.2):
+            return "http://127.0.0.1:7890"
+    except OSError:
+        return ""
+
+
+PROXY = detect_proxy()
 
 
 CAUSES = [
@@ -729,6 +784,19 @@ class Handler(BaseHTTPRequestHandler):
             self.send_index()
         elif self.path == "/api/stages":
             self.send_json(200, public_payload())
+        elif self.path == "/api/health":
+            self.send_json(
+                200,
+                {
+                    "ok": True,
+                    "model": MODEL,
+                    "key_configured": bool(API_KEY),
+                    "env_file_loaded": ENV_FILE_LOADED,
+                    "proxy_configured": bool(PROXY),
+                    "host": HOST,
+                    "port": PORT,
+                },
+            )
         elif self.path == "/favicon.ico":
             self.send_response(204)
             self.end_headers()
@@ -783,20 +851,46 @@ def validate_config() -> None:
 
 
 def main() -> None:
+    if sys.version_info < (3, 8):
+        print("需要 Python 3.8 或更高版本。", file=sys.stderr)
+        raise SystemExit(1)
+
     validate_config()
     if not API_KEY:
         print(
-            "TYPESAFE_API_KEY is not set. Run:\n"
-            "  source ~/.bash_profile\n"
-            "  python3 support-demo/server.py",
+            "TYPESAFE_API_KEY 未设置。任选一种方式：\n"
+            "  1) cp support-demo/env.example support-demo/.env 并填写 key\n"
+            "  2) export TYPESAFE_API_KEY=\"...\" 后重新启动\n"
+            "注意：不要把 .env 提交到仓库。",
             file=sys.stderr,
         )
         raise SystemExit(1)
 
-    server = ThreadingHTTPServer((HOST, PORT), Handler)
+    try:
+        server = ThreadingHTTPServer((HOST, PORT), Handler)
+    except OSError as exc:
+        if exc.errno == errno.EADDRINUSE:
+            print(
+                f"端口 {PORT} 已被占用。先停止旧实例，或换一个端口：\n"
+                f"  PORT={PORT + 1} bash support-demo/start.sh",
+                file=sys.stderr,
+            )
+            raise SystemExit(1) from exc
+        raise
+
     print(f"Sleep bracelet triage demo: http://{HOST}:{PORT}")
     print(f"Jev model: {MODEL}")
+    print(f"Env file: {ENV_FILE if ENV_FILE_LOADED else '(not found)'}")
     print(f"Proxy: {PROXY or '(direct)'}")
+    if PROXY:
+        print("  override with TYPESAFE_PROXY=\"\" to disable the proxy")
+    if HOST not in ("127.0.0.1", "localhost", "::1"):
+        print(
+            f"Warning: HOST={HOST} exposes this unauthenticated demo beyond "
+            "this machine. Only use it on a trusted network.",
+            file=sys.stderr,
+        )
+    print(f"Health check: http://127.0.0.1:{PORT}/api/health")
     print("Press Ctrl+C to stop.")
     try:
         server.serve_forever()

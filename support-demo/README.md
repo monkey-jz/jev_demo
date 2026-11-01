@@ -2,6 +2,150 @@
 
 一个“生产环境模拟”Demo：用户买了睡眠手环，戴了一晚，第二天 App 里没有睡眠数据。页面通过对话逐项收集证据，每一步调用一次 Jev，最后再调用一次 Jev 做根因判断，并给出“用户侧 / 客服侧 / 研发质量侧”的处理建议。
 
+## 换一台电脑：最短启动路径
+
+### 0. 前置条件
+
+- Python **3.8+**（推荐 3.9+）
+- 能访问 `https://api.typesafe.ai` 的网络
+- 一个可用的 `TYPESAFE_API_KEY`
+- macOS / Linux：可直接用 `start.sh`；Windows：用 PowerShell 手动启动，或 Git Bash / WSL
+
+### 1. 拉取仓库
+
+```bash
+git clone https://github.com/monkey-jz/jev_demo.git
+cd jev_demo
+```
+
+确认 `support-demo/index.html` 存在。如果不存在，先执行 `git pull` 或确认拉取的是最新分支。
+
+### 2. 配置 API Key
+
+推荐使用 `.env`：
+
+```bash
+cp support-demo/env.example support-demo/.env
+# 编辑 support-demo/.env，填写 TYPESAFE_API_KEY
+```
+
+`.env` 已被 `.gitignore` 忽略，不会被提交。也可以直接在终端里设置：
+
+```bash
+export TYPESAFE_API_KEY="apikey_..."
+```
+
+`start.sh` 的 Key 读取顺序：
+
+1. 已导出的 `TYPESAFE_API_KEY`
+2. `~/.bash_profile` / `~/.profile` / `~/.bashrc` 中第一个能设置它的文件
+3. 交互式提示输入（不回显、不落盘）
+4. `support-demo/.env`（由 `server.py` 自己加载）
+
+### 3. 启动
+
+```bash
+bash support-demo/start.sh
+```
+
+启动后打开：
+
+```text
+http://127.0.0.1:8787
+```
+
+快速确认服务是否正常：
+
+```bash
+curl -s http://127.0.0.1:8787/api/health | python3 -m json.tool
+```
+
+`/api/health` 只返回配置状态（模型、Key 是否配置、是否加载 `.env`、是否使用代理），不会返回 Key 本身。
+
+### 4. 端口或代理有问题时
+
+```bash
+# 8787 被占用
+PORT=9000 bash support-demo/start.sh
+
+# 强制直连
+TYPESAFE_PROXY="" bash support-demo/start.sh
+
+# 指定代理
+TYPESAFE_PROXY="http://127.0.0.1:7890" bash support-demo/start.sh
+```
+
+### Windows PowerShell
+
+```powershell
+git clone https://github.com/monkey-jz/jev_demo.git
+cd jev_demo
+Copy-Item support-demo\env.example support-demo\.env
+# 编辑 support-demo\.env，填写 TYPESAFE_API_KEY
+python support-demo\server.py
+```
+
+如果系统里是 `py` 而不是 `python`：
+
+```powershell
+py -3 support-demo\server.py
+```
+
+`start.sh` 需要 Bash；在 Windows 原生 CMD / PowerShell 下直接运行 `server.py` 即可，它会读取 `support-demo\.env`。
+
+## 环境变量
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `TYPESAFE_API_KEY` | 无 | 必填，只在服务端使用 |
+| `TYPESAFE_PROXY` | 自动探测 | 显式代理地址；设为空字符串表示强制直连 |
+| `HTTPS_PROXY` / `https_proxy` | 自动继承 | 标准代理环境变量；没有显式 `TYPESAFE_PROXY` 时使用 |
+| `PORT` | `8787` | 本地服务端口 |
+| `HOST` | `127.0.0.1` | 监听地址；默认只允许本机访问 |
+
+代理探测顺序：
+
+1. `TYPESAFE_PROXY`（显式设置优先，空值 = 直连）
+2. `HTTPS_PROXY` / `https_proxy` / `HTTP_PROXY` / `http_proxy`
+3. 本机 `127.0.0.1:7890`（ClashX 常见端口）
+4. 直连
+
+如果 API 返回 **HTTP 451**、连接超时或 `network error`，通常是当前网络无法直连，需要在 `support-demo/.env` 中设置：
+
+```dotenv
+TYPESAFE_PROXY=http://127.0.0.1:7890
+```
+
+### 用 curl 验证代理和 Key
+
+```bash
+# 直连
+curl -sS -H "Authorization: Bearer $TYPESAFE_API_KEY" \
+  https://api.typesafe.ai/v1/models
+
+# 走代理
+curl -sS --proxy http://127.0.0.1:7890 \
+  -H "Authorization: Bearer $TYPESAFE_API_KEY" \
+  https://api.typesafe.ai/v1/models
+```
+
+## 常见问题
+
+| 现象 | 处理 |
+|---|---|
+| `Address already in use` / 端口被占用 | 停掉旧实例，或 `PORT=9000 bash support-demo/start.sh` |
+| `TYPESAFE_API_KEY 未设置` | 检查 `.env` 是否填了 key，或 `export TYPESAFE_API_KEY=...` |
+| HTTP 401 / 403 | Key 错误、失效，或账号没有该模型权限 |
+| HTTP 451 / 超时 / network error | 设置 `TYPESAFE_PROXY`；确认代理程序已启动 |
+| 页面能打开但对话不出现 | 打开浏览器控制台；检查 `/api/health` 和 `support-demo/server.py` 是否仍在运行 |
+| `python3: command not found` | 安装 Python 3.8+，或改用 `python` / `py -3` |
+| 端口不想暴露到局域网 | 保持 `HOST=127.0.0.1`；只有明确需要远程访问时才改 `0.0.0.0`，并加网络隔离 |
+| Windows 无法运行 `start.sh` | 用 PowerShell 手动运行 `python support-demo\server.py`，或使用 WSL / Git Bash |
+
+> 每次点击都会真实调用 Jev，并产生 token 费用。快捷回答按钮只是帮演示者快速走完整条链路。
+
+> 如果使用 Docker、远程开发机或虚拟机：默认 `127.0.0.1` 只在容器 / 虚拟机内部可见，需要在宿主机做端口转发；改成 `HOST=0.0.0.0` 会把这个未加认证的 Demo 暴露给同网段，必须确保网络可信。
+
 ## 为什么不是纯前端 HTML
 
 浏览器直接调用 `api.typesafe.ai` 会有两个问题：
@@ -22,36 +166,6 @@ https://api.typesafe.ai/v1/systemone
 ```
 
 API Key 只存在于服务端环境变量中，HTML 和浏览器网络请求里都没有。
-
-## 运行
-
-```bash
-cd /Users/jerry/project/jev_demo
-bash support-demo/start.sh
-```
-
-`start.sh` 会在 `TYPESAFE_API_KEY` 未设置时尝试读取 `~/.bash_profile`。也可以手动运行：
-
-```bash
-source ~/.bash_profile
-python3 support-demo/server.py
-```
-
-然后打开：
-
-```text
-http://127.0.0.1:8787
-```
-
-默认使用 ClashX 代理 `http://127.0.0.1:7890`。如果当前网络可直连，或你在其他环境运行：
-
-```bash
-TYPESAFE_PROXY="" python3 support-demo/server.py
-```
-
-也可以用 `PORT=9000` 改端口。
-
-> 每次点击都会真实调用 Jev，并产生 token 费用。快捷回答按钮只是帮演示者快速走完整条链路。
 
 ## 六个排查方向
 
@@ -140,9 +254,10 @@ TYPESAFE_PROXY="" python3 support-demo/server.py
 
 ```text
 support-demo/
-├── start.sh     # 读取环境变量并启动服务
-├── index.html   # 对话界面、诊断侧栏、API 原始请求 / 响应查看器
-├── server.py    # 静态页 + Jev 代理 + 阶段定义 + 规则守卫
+├── start.sh      # 读取环境变量 / 提示输入并启动服务
+├── env.example   # 复制为 .env 后填写 Key；.env 不会被提交
+├── index.html    # 对话界面、诊断侧栏、API 原始请求 / 响应查看器
+├── server.py     # 静态页 + Jev 代理 + 阶段定义 + 规则守卫
 └── README.md
 ```
 
@@ -157,3 +272,5 @@ support-demo/
 - 人工坐席接管、工单系统和 RMA 流程；
 - 网络出站合规，不要把本地代理当作生产网络方案；
 - API Key 轮换、服务端密钥管理，以及失败重试和降级策略。
+
+> 安全提醒：仓库里的 `jev-internal-share.md` 按之前的要求保留了历史演示 Key。换机器演示时，建议使用单独或可轮换的 Key，并确保 `support-demo/.env` 不被提交；如果这个仓库是公开的，任何出现在仓库里的 Key 都应视为已暴露。

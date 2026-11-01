@@ -20,6 +20,15 @@ cd jev_demo
 
 确认 `support-demo/index.html` 存在。如果不存在，先执行 `git pull` 或确认拉取的是最新分支。
 
+如果 `git clone` 超时或被重置，说明这台电脑需要先走代理。把下面的代理地址换成实际地址：
+
+```bash
+git -c http.proxy=http://127.0.0.1:7890 -c http.version=HTTP/1.1 \
+  clone https://github.com/monkey-jz/jev_demo.git
+```
+
+Git 的代理只影响拉取代码；Demo 运行时访问 Jev 的代理在下一步用 `.env` 单独控制。
+
 ### 2. 配置 API Key
 
 推荐使用 `.env`：
@@ -29,11 +38,13 @@ cp support-demo/env.example support-demo/.env
 # 编辑 support-demo/.env，填写 TYPESAFE_API_KEY
 ```
 
-`.env` 已被 `.gitignore` 忽略，不会被提交。也可以直接在终端里设置：
+`.env` 已被 `.gitignore` 忽略，不会随 `git clone` 带到新机器，也不会被提交——每台机器都要单独创建。也可以直接在终端里设置：
 
 ```bash
 export TYPESAFE_API_KEY="apikey_..."
 ```
+
+> macOS 默认终端是 zsh。如果 Key 只写在 `~/.zshrc` 里，`start.sh` 不会主动读取它；请重新打开终端让变量导出，或直接使用 `.env`。可用 `echo ${TYPESAFE_API_KEY:+set}` 检查当前终端有没有该变量（只输出 `set`，不会打印 Key）。
 
 `start.sh` 的 Key 读取顺序：
 
@@ -53,6 +64,8 @@ bash support-demo/start.sh
 ```text
 http://127.0.0.1:8787
 ```
+
+> 不要直接双击 `support-demo/index.html`。`file://` 页面无法请求本地的 `/api/*`，必须通过 `start.sh` 启动的服务打开。
 
 快速确认服务是否正常：
 

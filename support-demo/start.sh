@@ -9,8 +9,9 @@
 #   4. support-demo/.env, which server.py loads itself
 set -euo pipefail
 
-cd "$(dirname "$0")"
-ENV_FILE="$PWD/.env"
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+cd "$SCRIPT_DIR"
+ENV_FILE="$SCRIPT_DIR/.env"
 
 if [ -z "${TYPESAFE_API_KEY:-}" ]; then
   for profile in "$HOME/.bash_profile" "$HOME/.profile" "$HOME/.bashrc"; do
@@ -41,9 +42,12 @@ if [ -n "${TYPESAFE_API_KEY:-}" ]; then
   export TYPESAFE_API_KEY
 fi
 
+# A sourced shell profile may have changed the working directory.
+cd "$SCRIPT_DIR"
+
 if ! command -v python3 >/dev/null 2>&1; then
   echo "未找到 python3。请安装 Python 3.8+，或确认它已在 PATH 中。" >&2
   exit 1
 fi
 
-exec python3 server.py
+exec python3 "$SCRIPT_DIR/server.py"

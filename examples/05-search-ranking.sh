@@ -2,9 +2,8 @@
 # 示例 5 · 搜索结果排序（3 × score，同一标准）
 # 独立脚本：只发送这一个示例，不依赖 jev-demo-all.sh。
 #
-# 前置：
-#   source ~/.bash_profile        # 或 export TYPESAFE_API_KEY
-#   PROXY=http://127.0.0.1:7890   # 默认；直连可用时 PROXY=""
+# 前置：key 默认从仓库根目录的 .env 读取（无需 export）。
+#   PROXY=http://127.0.0.1:7890   # 可选；留空则自动探测本机 7890
 #
 # 运行：
 #   bash examples/05-search-ranking.sh
@@ -15,12 +14,16 @@
 
 set -u
 
-PROXY="${PROXY-http://127.0.0.1:7890}"
-URL="https://api.typesafe.ai/v1/systemone"
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+source "$SCRIPT_DIR/../load-env.sh"
+
+PROXY="${PROXY-}"
+URL="${JEV_API_URL:-https://api.jevgo.cn/v1/systemone}"
 
 if [ -z "${TYPESAFE_API_KEY:-}" ]; then
-  echo "TYPESAFE_API_KEY 未设置。先执行： source ~/.bash_profile" >&2
-  echo "或： export TYPESAFE_API_KEY=\"...\"" >&2
+  echo "TYPESAFE_API_KEY 未设置。在仓库根目录创建 .env 并填入：" >&2
+  echo "  TYPESAFE_API_KEY=sk-jh-..." >&2
+  echo "或临时： export TYPESAFE_API_KEY=\"...\"" >&2
   exit 1
 fi
 

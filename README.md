@@ -21,15 +21,15 @@
 
 ### 另一台电脑快速启动
 
-前置条件：Python 3.8+、可用的 `TYPESAFE_API_KEY`、能访问 `https://api.typesafe.ai`。
+前置条件：Python 3.8+、可用的 `TYPESAFE_API_KEY`、能访问 `https://api.jevgo.cn`。
 
 ```bash
 git clone https://github.com/monkey-jz/jev_demo.git
 cd jev_demo
 
-# 每台机器单独创建；.env 不会从 GitHub 拉取
-cp support-demo/env.example support-demo/.env
-# 编辑 support-demo/.env，填写 TYPESAFE_API_KEY
+# 每台机器单独创建一份，放在仓库根目录；.env 不会从 GitHub 拉取
+cp support-demo/env.example .env
+# 编辑根目录 .env，填写 TYPESAFE_API_KEY（两个 demo 和 examples/ 共用这一份）
 
 bash support-demo/start.sh
 ```
@@ -43,7 +43,7 @@ curl -s http://127.0.0.1:8787/api/health | python3 -m json.tool
 - 不要直接双击 `support-demo/index.html`，必须通过本地服务打开。
 - 8787 被占用时：`PORT=9000 bash support-demo/start.sh`。
 - 网络需要代理时，在 `.env` 里设置 `TYPESAFE_PROXY=http://127.0.0.1:7890`（替换成实际地址）。
-- Windows 请用 PowerShell 运行 `python support-demo\server.py`，并先创建 `support-demo\.env`。
+- Windows 请用 PowerShell 运行 `python support-demo\server.py`，并先创建仓库根目录的 `.env`。
 - `git clone` 超时通常是 GitHub 网络问题，与 Demo 的 Jev 代理是两回事，详见 `support-demo/README.md`。
 
 ## JEV × TETRIS：让 Jev 玩俄罗斯方块
@@ -61,8 +61,8 @@ curl -s http://127.0.0.1:8787/api/health | python3 -m json.tool
 前置条件与上面相同。在仓库根目录：
 
 ```bash
-cp tetris-demo/env.example tetris-demo/.env
-# 编辑 tetris-demo/.env，填写 TYPESAFE_API_KEY
+cp support-demo/env.example .env
+# 同样放在仓库根目录，与排障台共用同一份 key
 
 bash tetris-demo/start.sh
 ```

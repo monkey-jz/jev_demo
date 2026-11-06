@@ -24,7 +24,7 @@ from urllib import error, request
 from urllib.parse import urlparse
 
 BASE_DIR = Path(__file__).resolve().parent
-ENV_FILE = BASE_DIR / ".env"
+ENV_FILE = BASE_DIR.parent / ".env"  # 共享 key 文件在仓库根目录
 
 
 def load_env_file(path: Path) -> bool:
@@ -58,7 +58,9 @@ def load_env_file(path: Path) -> bool:
 
 ENV_FILE_LOADED = load_env_file(ENV_FILE)
 
-API_URL = "https://api.typesafe.ai/v1/systemone"
+API_URL = (
+    os.environ.get("JEV_API_URL") or "https://api.jevgo.cn/v1/systemone"
+).strip()
 MODEL = "jev-latest"
 HOST = (os.environ.get("HOST") or "127.0.0.1").strip()
 try:

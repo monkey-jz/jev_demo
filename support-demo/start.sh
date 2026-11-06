@@ -6,12 +6,12 @@
 #   1. TYPESAFE_API_KEY already exported
 #   2. the first of ~/.bash_profile, ~/.profile, ~/.bashrc that sets it
 #   3. an interactive prompt (the key is not echoed or written to disk)
-#   4. support-demo/.env, which server.py loads itself
+#   4. the repo-root .env, which server.py loads itself
 set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 cd "$SCRIPT_DIR"
-ENV_FILE="$SCRIPT_DIR/.env"
+ENV_FILE="$(cd "$SCRIPT_DIR/.." && pwd)/.env"   # 共享 key 文件在仓库根目录
 
 if [ -z "${TYPESAFE_API_KEY:-}" ]; then
   for profile in "$HOME/.bash_profile" "$HOME/.profile" "$HOME/.bashrc"; do
@@ -32,8 +32,8 @@ fi
 
 if [ -z "${TYPESAFE_API_KEY:-}" ] && [ ! -f "$ENV_FILE" ]; then
   echo "未找到 TYPESAFE_API_KEY。任选一种方式：" >&2
-  echo "  1) cp support-demo/env.example support-demo/.env   # 在仓库根目录" >&2
-  echo "     然后编辑 support-demo/.env，填入 key" >&2
+  echo "  1) cp support-demo/env.example .env   # 在仓库根目录创建唯一的 key 文件" >&2
+  echo "     然后编辑根目录 .env，填入 key（所有 demo 共用）" >&2
   echo "  2) export TYPESAFE_API_KEY=\"...\" && bash support-demo/start.sh" >&2
   exit 1
 fi

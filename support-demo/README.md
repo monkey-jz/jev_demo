@@ -7,7 +7,7 @@
 ### 0. 前置条件
 
 - Python **3.8+**（推荐 3.9+）
-- 能访问 `https://api.typesafe.ai` 的网络
+- 能访问 `https://api.jevgo.cn` 的网络（如无直连，可走代理；也可用 `JEV_API_URL` 改回官方 `https://api.typesafe.ai/v1/systemone`）
 - 一个可用的 `TYPESAFE_API_KEY`
 - macOS / Linux：可直接用 `start.sh`；Windows：用 PowerShell 手动启动，或 Git Bash / WSL
 
@@ -34,8 +34,9 @@ Git 的代理只影响拉取代码；Demo 运行时访问 Jev 的代理在下一
 推荐使用 `.env`：
 
 ```bash
-cp support-demo/env.example support-demo/.env
-# 编辑 support-demo/.env，填写 TYPESAFE_API_KEY
+cp support-demo/env.example .env
+# 编辑仓库根目录的 .env，填写 TYPESAFE_API_KEY
+# 这一份 .env 同时被 tetris-demo 和 examples/ 共用
 ```
 
 `.env` 已被 `.gitignore` 忽略，不会随 `git clone` 带到新机器，也不会被提交——每台机器都要单独创建。也可以直接在终端里设置：
@@ -51,7 +52,7 @@ export TYPESAFE_API_KEY="apikey_..."
 1. 已导出的 `TYPESAFE_API_KEY`
 2. `~/.bash_profile` / `~/.profile` / `~/.bashrc` 中第一个能设置它的文件
 3. 交互式提示输入（不回显、不落盘）
-4. `support-demo/.env`（由 `server.py` 自己加载）
+4. 仓库根目录的 `.env`（由 `server.py` 自己加载）
 
 ### 3. 启动
 
@@ -93,8 +94,8 @@ TYPESAFE_PROXY="http://127.0.0.1:7890" bash support-demo/start.sh
 ```powershell
 git clone https://github.com/monkey-jz/jev_demo.git
 cd jev_demo
-Copy-Item support-demo\env.example support-demo\.env
-# 编辑 support-demo\.env，填写 TYPESAFE_API_KEY
+Copy-Item support-demo\env.example .env
+# 编辑仓库根目录的 .env，填写 TYPESAFE_API_KEY
 python support-demo\server.py
 ```
 
@@ -104,7 +105,7 @@ python support-demo\server.py
 py -3 support-demo\server.py
 ```
 
-`start.sh` 需要 Bash；在 Windows 原生 CMD / PowerShell 下直接运行 `server.py` 即可，它会读取 `support-demo\.env`。
+`start.sh` 需要 Bash；在 Windows 原生 CMD / PowerShell 下直接运行 `server.py` 即可，它会读取仓库根目录的 `.env`。
 
 ## 环境变量
 
@@ -123,7 +124,7 @@ py -3 support-demo\server.py
 3. 本机 `127.0.0.1:7890`（ClashX 常见端口）
 4. 直连
 
-如果 API 返回 **HTTP 451**、连接超时或 `network error`，通常是当前网络无法直连，需要在 `support-demo/.env` 中设置：
+如果 API 返回 **HTTP 451**、连接超时或 `network error`，通常是当前网络无法直连，需要在仓库根目录的 `.env` 中设置：
 
 ```dotenv
 TYPESAFE_PROXY=http://127.0.0.1:7890
@@ -134,12 +135,12 @@ TYPESAFE_PROXY=http://127.0.0.1:7890
 ```bash
 # 直连
 curl -sS -H "Authorization: Bearer $TYPESAFE_API_KEY" \
-  https://api.typesafe.ai/v1/models
+  https://api.jevgo.cn/v1/models
 
 # 走代理
 curl -sS --proxy http://127.0.0.1:7890 \
   -H "Authorization: Bearer $TYPESAFE_API_KEY" \
-  https://api.typesafe.ai/v1/models
+  https://api.jevgo.cn/v1/models
 ```
 
 ## 常见问题
@@ -268,7 +269,7 @@ API Key 只存在于服务端环境变量中，HTML 和浏览器网络请求里�
 ```text
 support-demo/
 ├── start.sh      # 读取环境变量 / 提示输入并启动服务
-├── env.example   # 复制为 .env 后填写 Key；.env 不会被提交
+├── env.example   # 复制为仓库根目录的 .env 后填写 Key；.env 不会被提交
 ├── index.html    # 对话界面、诊断侧栏、API 原始请求 / 响应查看器
 ├── server.py     # 静态页 + Jev 代理 + 阶段定义 + 规则守卫
 └── README.md

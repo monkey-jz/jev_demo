@@ -11,7 +11,7 @@
 ### 0. 前置条件
 
 - Python **3.8+**（推荐 3.9+）
-- 能访问 `https://api.typesafe.ai` 的网络
+- 能访问 `https://api.jevgo.cn` 的网络（如无直连，可走代理；也可用 `JEV_API_URL` 改回官方 `https://api.typesafe.ai/v1/systemone`）
 - 一个可用的 `TYPESAFE_API_KEY`
 - macOS / Linux 可直接用 `start.sh`；Windows 用 PowerShell 手动启动，或 Git Bash / WSL
 
@@ -34,8 +34,9 @@ Git 的代理只影响拉代码；Demo 访问 Jev 的代理在下一步用 `.env
 ### 2. 配置 API Key
 
 ```bash
-cp tetris-demo/env.example tetris-demo/.env
-# 编辑 tetris-demo/.env，填写 TYPESAFE_API_KEY
+cp tetris-demo/env.example .env
+# 编辑仓库根目录的 .env，填写 TYPESAFE_API_KEY
+# 这一份 .env 同时被 support-demo 和 examples/ 共用
 ```
 
 `.env` 已被 `.gitignore` 忽略，不会从 GitHub 拉取，也不会被提交——每台机器都要单独创建。也可以直接：
@@ -49,7 +50,7 @@ export TYPESAFE_API_KEY="apikey_..."
 1. 已导出的 `TYPESAFE_API_KEY`
 2. `~/.bash_profile` / `~/.profile` / `~/.bashrc` 中第一个能设置它的文件
 3. 交互式提示输入（不回显、不落盘）
-4. `tetris-demo/.env`（由 `server.py` 自己加载）
+4. 仓库根目录的 `.env`（由 `server.py` 自己加载）
 
 ### 3. 启动
 
@@ -104,8 +105,8 @@ TYPESAFE_PROXY=http://127.0.0.1:7890
 ```powershell
 git clone https://github.com/monkey-jz/jev_demo.git
 cd jev_demo
-Copy-Item tetris-demo\env.example tetris-demo\.env
-# 编辑 tetris-demo\.env，填写 TYPESAFE_API_KEY
+Copy-Item tetris-demo\env.example .env
+# 编辑仓库根目录的 .env，填写 TYPESAFE_API_KEY
 python tetris-demo\server.py
 ```
 
@@ -265,7 +266,7 @@ py -3 tetris-demo\server.py
 tetris-demo/
 ├── screenshot.png  # 界面截图
 ├── start.sh        # 读取 Key / 启动服务
-├── env.example     # 复制为 .env 后填写 Key；.env 不会提交
+├── env.example     # 复制为仓库根目录的 .env 后填写 Key；.env 不会提交
 ├── index.html      # 棋盘、决策面板、实时请求/响应控制台
 ├── style.css       # 深色界面和响应式布局
 ├── engine.js       # 纯规则：旋转、合法落点、消行、启发式、候选短名单
@@ -291,7 +292,7 @@ API Key 只存在于服务端环境变量 / `.env` 中，浏览器 JS 和浏览�
 | 现象 | 处理 |
 |---|---|
 | `Address already in use` / 端口被占用 | 停掉旧实例，或 `PORT=9000 bash tetris-demo/start.sh` |
-| `TYPESAFE_API_KEY 未设置` | 检查 `tetris-demo/.env` 是否填了 key，或 `export TYPESAFE_API_KEY=...` |
+| `TYPESAFE_API_KEY 未设置` | 检查仓库根目录的 `.env` 是否填了 key，或 `export TYPESAFE_API_KEY=...` |
 | HTTP 401 / 403 | Key 错误、失效，或账号没有该模型权限 |
 | HTTP 451 / 超时 / network error | 设置 `TYPESAFE_PROXY`；确认代理程序已启动 |
 | 页面打开但开始后一直不动 | 打开浏览器控制台和 `/api/decide` 响应区；确认 `server.py` 仍在运行 |
@@ -312,7 +313,7 @@ API Key 只存在于服务端环境变量 / `.env` 中，浏览器 JS 和浏览�
 
 ## 为什么不是纯前端 HTML
 
-纯前端直接调用 `api.typesafe.ai` 会让 API Key 进入浏览器 JS，等于公开；同时还要处理 CORS、代理和密钥轮换。
+纯前端直接调用 `api.jevgo.cn` 会让 API Key 进入浏览器 JS，等于公开；同时还要处理 CORS、代理和密钥轮换。
 
 这里的链路是：
 
@@ -323,7 +324,7 @@ API Key 只存在于服务端环境变量 / `.env` 中，浏览器 JS 和浏览�
 tetris-demo/server.py
       │  Authorization: Bearer $TYPESAFE_API_KEY
       ▼
-https://api.typesafe.ai/v1/systemone
+https://api.jevgo.cn/v1/systemone
 ```
 
 浏览器只接触本地服务的 `/api/decide` 和 `/api/health`。

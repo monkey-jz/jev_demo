@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 # Jev System One API — 一键复跑内部分享文档 §5 的 9 个示例。
 #
-# 前置：
-#   source ~/.bash_profile        # 或自行 export TYPESAFE_API_KEY
-#   PROXY=http://127.0.0.1:7890   # 默认值；直连可用时用 PROXY="" 关闭
+# 前置：key 默认从仓库根目录的 .env 读取（无需 export）。
+#   PROXY=http://127.0.0.1:7890   # 可选；留空则自动探测本机 7890
 #
 # 运行：
 #   bash jev-demo-all.sh
@@ -16,14 +15,17 @@
 
 set -u
 
-PROXY="${PROXY-http://127.0.0.1:7890}"
-BASE_URL="https://api.typesafe.ai"
-URL="$BASE_URL/v1/systemone"
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+source "$SCRIPT_DIR/load-env.sh"
+
+PROXY="${PROXY-}"
+BASE_URL="${JEV_BASE_URL:-https://api.jevgo.cn}"
+URL="${JEV_API_URL:-$BASE_URL/v1/systemone}"
 
 if [ -z "${TYPESAFE_API_KEY:-}" ]; then
-  echo "TYPESAFE_API_KEY 未设置。" >&2
-  echo "先执行： source ~/.bash_profile" >&2
-  echo "或：     export TYPESAFE_API_KEY=\"...\"" >&2
+  echo "TYPESAFE_API_KEY 未设置。在仓库根目录创建 .env 并填入：" >&2
+  echo "  TYPESAFE_API_KEY=sk-jh-..." >&2
+  echo "或临时： export TYPESAFE_API_KEY=\"...\"" >&2
   exit 1
 fi
 
